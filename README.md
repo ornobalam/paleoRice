@@ -1,9 +1,4 @@
----
-title: "paleoRice"
-author: "Ornob Alam"
-
----
-
+# paleoRice
 
 paleoRice is a tool to interactively explore the spatial and temporal distributions of rice archaeobotanical sites across Asia. The options on the sidebar allow filtering of sites by various criteria, and clicking on the sites (represented by blue dots) on the map produces pop-ups containing metadata associated with each site. Each archaeobotanical site spans hundreds of years, and the filtering by years BP considers the starting date of each site. 
 
