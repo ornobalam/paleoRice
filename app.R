@@ -179,7 +179,9 @@ ui <- fluidPage(
   
   # App title
   
-   titlePanel(""
+   titlePanel(
+              
+    actionButton("about", "",icon = icon("question")   )
   
    ),
    
@@ -194,7 +196,7 @@ ui <- fluidPage(
       img(src="logo.png", height='120px',width='200px'),
       
       
-      actionButton("about", "",icon = icon("question")    ),
+      
       
       
       # Inputs
