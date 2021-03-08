@@ -1,0 +1,177 @@
+---
+title: "Data Pre-processing"
+author: "Ornob"
+date: "3/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load libraries
+
+```{r}
+
+library(ggplot2)
+library(tmap)
+library(sf)
+library(dplyr)
+library(rnaturalearth)
+library(fs)
+
+```
+
+# Read in the rice archaeological database from Silva et al., 2015 in .kmz format
+
+```{r}
+input_file <- "pone.0137024.s001.kmz"
+
+target_file <- '.temp.kml.zip'
+fs::file_copy(input_file, target_file)
+
+unzip(target_file, )
+
+fs::file_delete(target_file)
+
+arch_data <- sf::read_sf("Rice Archaeological Database.kml")
+
+```
+
+# Manipulate as a data.frame
+
+```{r}
+arch_data_df <- as.data.frame(arch_data)
+
+# break up the description column into constituent parts
+
+columns <- arch_data_df$Description[1]
+columns <- str_split(columns, "<br>")
+columns <- do.call(c,columns)
+columns <- gsub(":.*","",columns)
+columns <- gsub("  "," ", columns)
+columns <- gsub("?","", columns, fixed = TRUE)
+columns <- trimws(columns,which = "both")
+
+sl <- separate(data = arch_data_df, col = "Description", into = columns, sep = "<br>")
+
+# remove description keys and fix gaps
+
+for (i in columns){
+  sl[,i] <- gsub(".*:","",sl[,i])
+  sl[,i] <- trimws(sl[,i], which = c("both"))
+}
+
+# make dates numeric
+sl$`Est. Date Median` <- as.numeric(sl$`Est. Date Median`)
+
+sl$`Start Date` <- as.numeric(sl$`Start Date`)
+
+sl$`Finish Date` <- as.numeric(sl$`Finish Date`)
+
+# fix some of the labels
+sl$`Rice details`[c(283,293)] <- "gr"
+
+sl$`Rice details` <- gsub("poillen","pollen",sl$`Rice details`)
+
+
+# group countries into subregions
+
+mse_asia  <- c("Vietnam","Cambodia","Thailand","Laos","Myanmar")
+ise_asia <- c("Philippines","Indonesia","Malaysia","Taiwan","Marianas")
+ne_asia <- c("China","Japan","North Korea","South Korea")
+ind_sub <- c("India","Bangladesh","Pakistan","Sri Lanka")
+
+sl  %>% dplyr::mutate(Subregion = case_when( (Country %in% mse_asia) ~ "Mainland Southeast Asia", 
+                                           (Country %in% ise_asia) ~ "Island Southeast Asia & Taiwan",
+                     (Country %in% ne_asia) ~ "China & Northeast Asia", 
+                     (Country %in% ind_sub) ~ "Indian subcontinent" ) ) -> sl
+
+
+# Fix labels for viewing on map later
+
+sl %>% dplyr::mutate(`Evidence for rice` = `Rice details`) -> sl
+
+
+sl$`Evidence for rice` = gsub("ph","phytoliths", sl$`Evidence for rice`)
+sl$`Evidence for rice` = gsub("imp","imprints", sl$`Evidence for rice`)
+sl$`Evidence for rice` = gsub("gr","grains", sl$`Evidence for rice`)
+sl$`Evidence for rice` = gsub("sb","spikelet bases", sl$`Evidence for rice`)
+sl$`Evidence for rice` = gsub("wild","w", sl$`Evidence for rice`)
+sl$`Evidence for rice` = gsub("w","wild", sl$`Evidence for rice`)
+sl$`Evidence for rice` = gsub("fs","field system", sl$`Evidence for rice`)
+sl$`Evidence for rice` = gsub("spkt","whole spikelet bases", sl$`Evidence for rice`)
+
+
+
+sl$`Evidence for cultivation` = gsub("or W?","or wild", sl$`Evidence for cultivation`)
+sl$`Evidence for cultivation` = gsub("oc","other crops present", sl$`Evidence for cultivation`)
+sl$`Evidence for cultivation` = gsub("aw","arable weeds reported", sl$`Evidence for cultivation`)
+sl$`Evidence for cultivation` = gsub("tt","tillage tools reported", sl$`Evidence for cultivation`)
+sl$`Evidence for cultivation` = gsub("inf","inferred without supporting evidence", sl$`Evidence for cultivation`)
+sl$`Evidence for cultivation` = gsub("fs","field system", sl$`Evidence for cultivation`)
+
+
+sl$`Evidence for domestication` = gsub("fs","field system", sl$`Evidence for domestication`)
+sl$`Evidence for domestication` = gsub("aw","arable weeds reported", sl$`Evidence for domestication`)
+sl$`Evidence for domestication` = gsub("gr","grains", sl$`Evidence for domestication`)
+sl$`Evidence for domestication` = gsub("Gra","grains", sl$`Evidence for domestication`)
+sl$`Evidence for domestication` = gsub("inf","inferred without supporting evidence", sl$`Evidence for domestication`)
+sl$`Evidence for domestication` = gsub("ph","phytoliths", sl$`Evidence for domestication`)
+sl$`Evidence for domestication` = gsub("sb","spikelet bases", sl$`Evidence for domestication`)
+sl$`Evidence for domestication` = gsub("SB","spikelet bases", sl$`Evidence for domestication`)
+
+
+sl$`Evidence for wet/paddy field` = gsub("aw","arable weeds reported", sl$`Evidence for wet/paddy field`)
+sl$`Evidence for wet/paddy field` = gsub("Aw","arable weeds reported", sl$`Evidence for wet/paddy field`)
+sl$`Evidence for wet/paddy field` = gsub("fs","field system", sl$`Evidence for wet/paddy field`)
+sl$`Evidence for wet/paddy field` = gsub("inf","inferred without supporting evidence", sl$`Evidence for wet/paddy field`)
+sl$`Evidence for wet/paddy field` = gsub("ph","phytoliths", sl$`Evidence for wet/paddy field`)
+sl$`Evidence for wet/paddy field` = gsub("tt","tillage tools reported", sl$`Evidence for wet/paddy field`)
+
+```
+
+# Get map of region
+
+```{r}
+
+map <- ne_countries(scale = "medium", continent = c("Asia","Oceania"), returnclass = "sf") 
+
+
+```
+
+# Get climate data
+
+
+```{r}
+
+temp <- read.csv("global_temp.csv")
+colnames(temp) <- c("Age","Temperature","Uncertainty")
+
+temp$calAge <-  rev(seq((-11290+1950), 2000, by = 20))
+
+temp <- temp[4:568,]
+
+temp <- temp %>% rowwise() %>% dplyr::mutate(min = Temperature - Uncertainty, max = Temperature + Uncertainty )
+
+temp <- temp %>% dplyr::mutate(bp = abs(calAge - 2000))
+
+
+```
+
+# Save all of the above as RDS files
+
+```{r}
+
+saveRDS(sl, file = "arch_database.rds")
+
+saveRDS(map, file = "map.rds")
+
+saveRDS(temp, file = "temperature_data.rds")
+
+```
+
+
+
+
+
