@@ -8,15 +8,26 @@ library(tmap)
 library(shiny)
 library(shinyWidgets)
 library(leaflet)
+library(sf)
+library(scales)
+library(sp)
 
 
 # read in data
 
-sl <- readRDS("arch_database.rds")
-map <- readRDS("map.rds")
-temp <- readRDS("temperature_data.rds")
+sl <- readRDS("./arch_database.rds")
+map <- readRDS("./map.rds")
+
+map <- st_as_sf(map, coords = c("longitude", "latitude"), crs = 4326) 
+
+st_crs(map) <- 4326
+
+temp <- readRDS("./temperature_data.rds")
 
 # create functions for filtering data according to inputs
+
+
+
 
 data_filter <- function(subregion = ".*", ricedetails = ".*" , 
                         wetpaddy = ".*", domestication = ".*",
@@ -43,6 +54,8 @@ map_filter <- function(subregion = ".*", ricedetails = ".*" , wetpaddy = ".*",
                         grepl(wetpaddy, `Wet/Paddy`), grepl(domestication, Domestication),
                         for_filter <= from, for_filter >= to) -> int
   se <- st_as_sf(int)
+  st_crs(se) <- 4326
+  
   se
 }
 
@@ -87,7 +100,7 @@ server <- function(input, output) {
   
   output$SliderText <- renderText({my_range()})
   
-  output$archPlot <- renderPlot({
+  output$archPlot <-  renderPlot({
     ggplot(data = data_filter(subregion = formulaText_sr(),
                               wetpaddy = formulaText_wp(),
                               ricedetails = formulaText_rd(),
@@ -96,20 +109,21 @@ server <- function(input, output) {
                               to = formulaText_to()),
            aes( x = bp)) +
       geom_col(aes(y = Freq), fill = "#38598CFF") +
-      geom_line(data = temp, aes(y = (Temperature + 0.6) * scaleFactor , x = bp), 
+      geom_line(data = temp, aes(y = (Temperature + 0.6) * 70 , x = bp), 
                 lwd = 1, col = "#C03A83FF") +
-      geom_ribbon(data = temp, aes(ymin = (min + 0.6) * scaleFactor, 
-                                   ymax = (max + 0.6) * scaleFactor, x = bp),
+      geom_ribbon(data = temp, aes(ymin = (min + 0.6) * 70, 
+                                   ymax = (max + 0.6) * 70, x = bp),
                   fill = "#C03A83FF", alpha = 0.1) +
       scale_y_continuous(
-        name = "Sites with start dates in last 500 years",
+        name = "Sites w/ start dates in preceding 500 yrs",
         
         
-        sec.axis = sec_axis( ~./scaleFactor - 0.6  , name="Temperature (\u00B0C)")
+        sec.axis = sec_axis( ~./70 - 0.6  , name="Temperature (\u00B0C)")
       ) + 
       xlab("Years BP") +
       scale_x_reverse(breaks = seq(0,15000, by = 2000), limits = c(15000,0), expand = c(0,0)) +
-      theme(axis.title.y = element_text(size = 18),
+      theme(axis.title.y.left = element_text(size = 15),
+            axis.title.y.right = element_text(size = 18),
             axis.title.x = element_text(size = 18),
             axis.text.x = element_text(size = 14),
             axis.text.y = element_text(size = 14),
@@ -119,7 +133,8 @@ server <- function(input, output) {
             panel.grid.minor.y = element_blank(),
             panel.grid.major.x =  element_line( size=.5, color="darkgrey" , linetype = 3 ),
             panel.grid.minor.x =  element_blank(),
-            axis.line.y = element_line() 
+            axis.line.y = element_line(),
+            aspect.ratio = 1/3
       )
   })
   
@@ -146,6 +161,18 @@ server <- function(input, output) {
                         from = formulaText_from(),
                         to = formulaText_to())
     
+    if (nrow(sites)==0){
+      map <- tm_shape(map, bbox = st_bbox(main)) +
+        tm_borders(lwd = 1) +
+        tm_fill(col = "name", palette = viridis_pal(option = "C")(20)[15:20], legend.show = F, 
+                id = "name", popup.vars = F) +
+        tm_basemap(NULL)
+      
+      tmap_leaflet(map, mode="view", show=T)
+      
+      
+    } else {
+    
     map <- tm_shape(map, bbox = st_bbox(main)) +
       tm_borders(lwd = 1) +
       tm_fill(col = "name", palette = viridis_pal(option = "C")(20)[15:20], legend.show = F, 
@@ -164,7 +191,7 @@ server <- function(input, output) {
       tm_basemap(NULL)
     
     tmap_leaflet(map, mode="view", show=T)
-    
+    }
     
     
   })
@@ -198,7 +225,6 @@ ui <- fluidPage(
       
       
       
-      
       # Inputs
       
       selectInput("subregion", "Subregion:",
@@ -217,7 +243,7 @@ ui <- fluidPage(
                     "grains" = "gr",
                     "phytoliths" = "ph",
                     "spikelet bases" = "sb",
-                    "Whole spikelet bases" = "spkt",
+                    "whole spikelet bases" = "spkt",
                     "imprints in pottery/brick" = "imp"
                   )),
       
@@ -228,19 +254,16 @@ ui <- fluidPage(
                       choices = seq(from = 16000, to = 0, by = -1000), 
                       selected = c(9000,0), from_max = 0, from_min = 16000,
                       to_max = 0, to_min = 16000,
-                      dragRange = T), 
-      
-     
+                      dragRange = T)
       
       
     ),
     
     # Main panel for displaying outputs
     mainPanel(
-   
-    
-      leafletOutput("archMap"),
-      plotOutput("archPlot")
+  
+      leafletOutput("archMap", height = 340),
+      plotOutput("archPlot", height = 340)
        
     )
   )
