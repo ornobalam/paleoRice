@@ -5,6 +5,6 @@ account: ornob
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3757805
-bundleId: 4319048
+bundleId: 4332786
 url: https://ornob.shinyapps.io/paleorice/
-when: 1615259389.56992
+when: 1615497662.54207
