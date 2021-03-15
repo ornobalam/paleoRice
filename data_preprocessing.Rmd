@@ -108,7 +108,7 @@ sl$`Evidence for cultivation` = gsub("or W?","or wild", sl$`Evidence for cultiva
 sl$`Evidence for cultivation` = gsub("oc","other crops present", sl$`Evidence for cultivation`)
 sl$`Evidence for cultivation` = gsub("aw","arable weeds reported", sl$`Evidence for cultivation`)
 sl$`Evidence for cultivation` = gsub("tt","tillage tools reported", sl$`Evidence for cultivation`)
-sl$`Evidence for cultivation` = gsub("inf","inferred without supporting evidence", sl$`Evidence for cultivation`)
+sl$`Evidence for cultivation` = gsub("inf","inferred w/o evidence", sl$`Evidence for cultivation`)
 sl$`Evidence for cultivation` = gsub("fs","field system", sl$`Evidence for cultivation`)
 
 
@@ -116,7 +116,7 @@ sl$`Evidence for domestication` = gsub("fs","field system", sl$`Evidence for dom
 sl$`Evidence for domestication` = gsub("aw","arable weeds reported", sl$`Evidence for domestication`)
 sl$`Evidence for domestication` = gsub("gr","grains", sl$`Evidence for domestication`)
 sl$`Evidence for domestication` = gsub("Gra","grains", sl$`Evidence for domestication`)
-sl$`Evidence for domestication` = gsub("inf","inferred without supporting evidence", sl$`Evidence for domestication`)
+sl$`Evidence for domestication` = gsub("inf","inferred w/o evidence", sl$`Evidence for domestication`)
 sl$`Evidence for domestication` = gsub("ph","phytoliths", sl$`Evidence for domestication`)
 sl$`Evidence for domestication` = gsub("sb","spikelet bases", sl$`Evidence for domestication`)
 sl$`Evidence for domestication` = gsub("SB","spikelet bases", sl$`Evidence for domestication`)
